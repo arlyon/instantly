@@ -33,6 +33,10 @@ struct Opts {
     /// The query hash to use when requesting the images.
     #[clap(short, long)]
     query_hash: Option<String>,
+
+    /// Maximum number of photos to download simultaneously.
+    #[clap(long, default_value = "16")]
+    buffer_size: usize,
 }
 
 #[async_std::main]
@@ -42,6 +46,7 @@ async fn main() -> Result<()> {
         force,
         username,
         query_hash,
+        buffer_size,
     } = Opts::parse();
 
     let x = PathBuf::from(username.clone());
@@ -55,19 +60,23 @@ async fn main() -> Result<()> {
         .with_context(|| "User not found.")?
         .images(query_hash);
 
-    let stream = my_images.await.map(|image| {
-        let folder = folder.clone();
-        async move {
-            match download_image(&image, &folder, force).await {
-                Ok(DownloadStatus::Downloaded) => println!("Downloaded:     {}", image),
-                Ok(DownloadStatus::ReDownloaded) => println!("Re-downloaded:  {}", image),
-                Ok(DownloadStatus::AlreadyExists) => println!("Already Exists: {}", image),
-                Err(e) => println!("Couldn't download {}: {}", image.shortcode.yellow(), e),
+    my_images
+        .await
+        .map(|image| {
+            let folder = folder.clone();
+            async move {
+                match download_image(&image, &folder, force).await {
+                    Ok(DownloadStatus::Downloaded) => println!("Downloaded:     {}", image),
+                    Ok(DownloadStatus::ReDownloaded) => println!("Re-downloaded:  {}", image),
+                    Ok(DownloadStatus::AlreadyExists) => println!("Already Exists: {}", image),
+                    Err(e) => println!("Couldn't download {}: {}", image.shortcode.yellow(), e),
+                }
             }
-        }
-    });
+        })
+        .buffer_unordered(buffer_size)
+        .collect::<Vec<()>>()
+        .await;
 
-    stream.buffer_unordered(20).collect::<Vec<()>>().await;
     Ok(())
 }
 

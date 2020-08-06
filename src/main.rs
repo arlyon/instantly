@@ -3,6 +3,7 @@
 use anyhow::{anyhow, Context, Result};
 use async_std::{fs::create_dir_all, path::PathBuf};
 use futures::stream::StreamExt;
+use human_panic::setup_panic;
 use std::{env, rc::Rc};
 use url::Url;
 
@@ -15,6 +16,8 @@ mod util;
 
 #[async_std::main]
 async fn main() -> Result<()> {
+    setup_panic!();
+
     let username = env::args().nth(1).context("No username provided")?;
 
     let x = PathBuf::from(username.clone());

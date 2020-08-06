@@ -45,7 +45,11 @@ impl Display for Image {
             "{: >11} {}",
             self.shortcode.yellow(),
             match self.get_caption() {
-                Some(cap) => cap.as_str().truncate_ellipse(40).bright_blue(),
+                Some(cap) => cap
+                    .replace("\n", "")
+                    .as_str()
+                    .truncate_ellipse(40)
+                    .bright_blue(),
                 None => "no caption".blue(),
             },
         )

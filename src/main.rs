@@ -2,9 +2,11 @@
 
 use anyhow::{anyhow, Context, Result};
 use async_std::{fs::create_dir_all, path::PathBuf};
+use clap::Clap;
+use colored::*;
 use futures::stream::StreamExt;
 use human_panic::setup_panic;
-use std::{env, rc::Rc};
+use std::rc::Rc;
 use url::Url;
 
 use crate::data::ProfileData;
@@ -14,11 +16,33 @@ use crate::util::{download_image, DownloadStatus};
 mod data;
 mod util;
 
+/// Download instagram photos instantly. To download multiple
+/// pages of pictures, you need the 'query hash' which can be
+/// obtained from an official instagram request. It's generated
+/// in-client, and changes frequently.
+#[derive(Clap)]
+#[clap(version = "1.0", author = "Alexander Lyon <alex@arlyon.dev>")]
+struct Opts {
+    /// The username to fetch.
+    username: String,
+
+    /// Forces download, overwriting any files that may already exist locally.
+    #[clap(short, long)]
+    force: bool,
+
+    /// The query hash to use when requesting the images.
+    #[clap(short, long)]
+    query_hash: Option<String>,
+}
+
 #[async_std::main]
 async fn main() -> Result<()> {
     setup_panic!();
-
-    let username = env::args().nth(1).context("No username provided")?;
+    let Opts {
+        force,
+        username,
+        query_hash,
+    } = Opts::parse();
 
     let x = PathBuf::from(username.clone());
     create_dir_all(&x).await?;
@@ -29,15 +53,16 @@ async fn main() -> Result<()> {
         .user(username)
         .await
         .with_context(|| "User not found.")?
-        .images();
+        .images(query_hash);
 
     let stream = my_images.await.map(|image| {
         let folder = folder.clone();
         async move {
-            match download_image(&image, &folder, false).await {
-                Ok(DownloadStatus::Downloaded) => println!("Downloaded {}", image),
-                Ok(DownloadStatus::AlreadyExists) => println!("Already Exists {}", image),
-                Err(e) => println!("Couldn't download: {}", e),
+            match download_image(&image, &folder, force).await {
+                Ok(DownloadStatus::Downloaded) => println!("Downloaded:     {}", image),
+                Ok(DownloadStatus::ReDownloaded) => println!("Re-downloaded:  {}", image),
+                Ok(DownloadStatus::AlreadyExists) => println!("Already Exists: {}", image),
+                Err(e) => println!("Couldn't download {}: {}", image.shortcode.yellow(), e),
             }
         }
     });

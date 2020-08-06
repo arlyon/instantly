@@ -7,6 +7,7 @@ use crate::data::Image;
 pub enum DownloadStatus {
     Downloaded,
     AlreadyExists,
+    ReDownloaded,
 }
 
 pub async fn download_image(
@@ -15,7 +16,8 @@ pub async fn download_image(
     force: bool,
 ) -> Result<DownloadStatus> {
     let file_name = folder.join(format!("{}.jpg", image.shortcode));
-    if !force && file_name.exists().await {
+    let exists = file_name.exists().await;
+    if exists && !force {
         return Ok(DownloadStatus::AlreadyExists);
     };
 
@@ -26,6 +28,12 @@ pub async fn download_image(
 
     copy(reader, &mut writer)
         .await
-        .map(|_| DownloadStatus::Downloaded)
+        .map(|_| {
+            if exists {
+                DownloadStatus::ReDownloaded
+            } else {
+                DownloadStatus::Downloaded
+            }
+        })
         .map_err(|e| anyhow!(e))
 }

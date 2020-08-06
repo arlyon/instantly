@@ -1,5 +1,6 @@
 use anyhow::{anyhow, Result};
 use colored::*;
+use ellipse::Ellipse;
 use futures::stream;
 use futures::Stream;
 use serde::Deserialize;
@@ -41,11 +42,11 @@ impl Display for Image {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::result::Result<(), std::fmt::Error> {
         write!(
             f,
-            "{}: {}",
+            "{: >11} {}",
             self.shortcode.yellow(),
             match self.get_caption() {
-                Some(cap) => cap.bright_blue(),
-                None => "No caption".blue(),
+                Some(cap) => cap.as_str().truncate_ellipse(40).bright_blue(),
+                None => "no caption".blue(),
             },
         )
     }
@@ -104,25 +105,36 @@ pub struct MoreRequest {
 }
 
 impl User {
-    pub async fn images(self) -> impl Stream<Item = Image> {
+    /// Fetching the images for a given user.
+    /// If provided, the query string will allow fetching
+    /// multiple pages of results, streaming the images back.
+    pub async fn images(self, query_hash: Option<String>) -> impl Stream<Item = Image> {
         let images: Vec<Image> = self.edge_owner_to_timeline_media.images();
 
         stream::unfold(
-            (images, self.edge_owner_to_timeline_media.page_info, self.id),
-            |(mut images, next_page, id)| {
+            (
+                images,
+                self.edge_owner_to_timeline_media.page_info,
+                self.id,
+                query_hash,
+            ),
+            |(mut images, next_page, id, query_hash)| {
                 async move {
-                    match (images.pop(), next_page) {
-                        (Some(image), next_page) => Some((image, (images, next_page, id))),
+                    match (images.pop(), next_page, query_hash) {
+                        (Some(image), next_page, query_hash) => {
+                            Some((image, (images, next_page, id, query_hash)))
+                        }
                         (
                             None,
                             PageInfo {
                                 has_next_page: true,
                                 end_cursor: Some(cursor),
                             },
-                        ) => match get_more(id.clone(), cursor).await {
-                            Ok((mut new_images, next_page)) => {
-                                new_images.pop().map(|i| (i, (new_images, next_page, id)))
-                            }
+                            Some(query_hash),
+                        ) => match get_more(&id, &cursor, &query_hash).await {
+                            Ok((mut new_images, next_page)) => new_images
+                                .pop()
+                                .map(|i| (i, (new_images, next_page, id, Some(query_hash)))),
                             Err(e) => {
                                 println!("{}", e.context("Could not fetch next page of images!"));
                                 None
@@ -136,8 +148,12 @@ impl User {
     }
 }
 
-async fn get_more(account_id: String, cursor: String) -> Result<(Vec<Image>, PageInfo)> {
-    let url = format!("https://www.instagram.com/graphql/query/?query_hash=a35193323f3a437993a26a2efc4fe454&variables={{\"id\":\"{}\",\"first\":50,\"after\":\"{}\"}}", account_id, cursor);
+async fn get_more(
+    account_id: &String,
+    cursor: &String,
+    query_hash: &String,
+) -> Result<(Vec<Image>, PageInfo)> {
+    let url = format!("https://www.instagram.com/graphql/query/?query_hash={}&variables={{\"id\":\"{}\",\"first\":50,\"after\":\"{}\"}}", query_hash, account_id, cursor);
     let url = Url::parse(&url)?;
     let MoreRequest { data } = surf::get(url)
         .await

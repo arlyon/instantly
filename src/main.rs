@@ -1,23 +1,21 @@
-use crate::data::ProfileData;
-use crate::data::User;
+#![deny(unsafe_code, clippy::unwrap_used)]
+
 use anyhow::{anyhow, Context, Result};
-use async_std::{
-    fs::{create_dir_all, File},
-    path::PathBuf,
-};
-use futures::{io::copy, stream::StreamExt};
+use async_std::{fs::create_dir_all, path::PathBuf};
+use futures::stream::StreamExt;
 use std::{env, rc::Rc};
 use url::Url;
 
+use crate::data::ProfileData;
+use crate::data::User;
+use crate::util::{download_image, DownloadStatus};
+
 mod data;
+mod util;
 
 #[async_std::main]
 async fn main() -> Result<()> {
-    let username = env::args()
-        .into_iter()
-        .skip(1)
-        .next()
-        .context("No username provided")?;
+    let username = env::args().nth(1).context("No username provided")?;
 
     let x = PathBuf::from(username.clone());
     create_dir_all(&x).await?;
@@ -33,16 +31,15 @@ async fn main() -> Result<()> {
     let stream = my_images.await.map(|image| {
         let folder = folder.clone();
         async move {
-            let file_name = folder.join(format!("{}.jpg", image.shortcode));
-            let mut file = File::create(&file_name).await.unwrap();
-            let resp = surf::get(&image.url).await.unwrap();
-            copy(resp, &mut file).await.unwrap();
-            println!("Downloaded {}", image);
+            match download_image(&image, &folder, false).await {
+                Ok(DownloadStatus::Downloaded) => println!("Downloaded {}", image),
+                Ok(DownloadStatus::AlreadyExists) => println!("Already Exists {}", image),
+                Err(e) => println!("Couldn't download: {}", e),
+            }
         }
     });
 
     stream.buffer_unordered(20).collect::<Vec<()>>().await;
-
     Ok(())
 }
 
@@ -55,7 +52,7 @@ impl Instagram {
 
     async fn user<T: Into<String>>(self, user: T) -> Result<User> {
         let urlstr = format!("https://www.instagram.com/{}/", user.into());
-        let url = Url::parse(urlstr.as_str())?;
+        let url = Url::parse(&urlstr)?;
         let mut resp = surf::get(url)
             .await
             .map_err(|err| anyhow!(err))
@@ -64,7 +61,8 @@ impl Instagram {
         let data: ProfileData = resp
             .body_string()
             .await
-            .unwrap()
+            .map_err(|err| anyhow!(err))
+            .context("Failed to extract body from response.")?
             .lines()
             .filter_map(|s| {
                 let x = s
@@ -74,14 +72,12 @@ impl Instagram {
                 serde_json::from_str(x).ok()
             })
             .next()
-            .ok_or(anyhow!(
-                "Page did not include profile data. Does the user exist?"
-            ))?;
+            .ok_or_else(|| anyhow!("Page did not include profile data. Does the user exist?"))?;
 
         data.entry_data
             .profile_page
             .first()
             .map(|p| p.graphql.user.clone())
-            .ok_or(anyhow!("No user found in profile data."))
+            .ok_or_else(|| anyhow!("No user found in profile data."))
     }
 }

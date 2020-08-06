@@ -1,3 +1,4 @@
+use anyhow::{anyhow, Result};
 use colored::*;
 use futures::stream;
 use futures::Stream;
@@ -118,10 +119,15 @@ impl User {
                                 has_next_page: true,
                                 end_cursor: Some(cursor),
                             },
-                        ) => {
-                            let (mut new_images, next_page) = get_more(id.clone(), cursor).await;
-                            new_images.pop().map(|i| (i, (new_images, next_page, id)))
-                        }
+                        ) => match get_more(id.clone(), cursor).await {
+                            Ok((mut new_images, next_page)) => {
+                                new_images.pop().map(|i| (i, (new_images, next_page, id)))
+                            }
+                            Err(e) => {
+                                println!("{}", e.context("Could not fetch next page of images!"));
+                                None
+                            }
+                        },
                         _ => None, // no more images, and no next page
                     }
                 }
@@ -130,14 +136,18 @@ impl User {
     }
 }
 
-async fn get_more(account_id: String, cursor: String) -> (Vec<Image>, PageInfo) {
-    let url = format!("https://www.instagram.com/graphql/query/?query_hash=7437567ae0de0773fd96545592359a6b&variables={{\"id\":\"{}\",\"first\":50,\"after\":\"{}\"}}", account_id, cursor);
-    let url = Url::parse(&url).unwrap();
-    let resp: MoreRequest = surf::get(url).await.unwrap().body_json().await.unwrap();
-    (
-        resp.data.user.edge_owner_to_timeline_media.images(),
-        resp.data.user.edge_owner_to_timeline_media.page_info,
-    )
+async fn get_more(account_id: String, cursor: String) -> Result<(Vec<Image>, PageInfo)> {
+    let url = format!("https://www.instagram.com/graphql/query/?query_hash=a35193323f3a437993a26a2efc4fe454&variables={{\"id\":\"{}\",\"first\":50,\"after\":\"{}\"}}", account_id, cursor);
+    let url = Url::parse(&url)?;
+    let MoreRequest { data } = surf::get(url)
+        .await
+        .map_err(|e| anyhow!(e))?
+        .body_json()
+        .await?;
+    Ok((
+        data.user.edge_owner_to_timeline_media.images(),
+        data.user.edge_owner_to_timeline_media.page_info,
+    ))
 }
 
 #[derive(Deserialize, Debug)]

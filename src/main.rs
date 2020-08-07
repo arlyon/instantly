@@ -1,3 +1,8 @@
+//! instantly
+//!
+//! Copyright 2020 Alexander Lyon
+//! Released under MIT (see license)
+
 #![deny(unsafe_code, clippy::unwrap_used)]
 
 use anyhow::{anyhow, Context, Result};

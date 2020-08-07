@@ -1,3 +1,8 @@
+//! Various structs that map to return fields
+//! from the instagram API. Twofold, allows us
+//! to parse it type-safe using serde, while
+//! also adding impls to structs as needed.
+
 use anyhow::{anyhow, Result};
 use colored::*;
 use ellipse::Ellipse;

@@ -1,3 +1,5 @@
+//! Some utility functions.
+
 use anyhow::{anyhow, Result};
 use async_std::{fs::File, io::copy, path::PathBuf};
 use futures::try_join;
@@ -5,8 +7,11 @@ use futures::try_join;
 use crate::data::Image;
 
 pub enum DownloadStatus {
+    /// The image was downloaded.
     Downloaded,
+    /// the image already exists, but was force-downloaded.
     ForceDownloaded,
+    /// The image alraedy exists.
     AlreadyExists,
 }
 

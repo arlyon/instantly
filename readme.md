@@ -1,4 +1,4 @@
-# instantly
+# instantly ⚡
 
 Download photos from instagram with ease.
 
@@ -9,6 +9,17 @@ cargo install instantly
 instantly --help
 ```
 
-## What is my query hash?
+<p align="center" style="padding: 32px 0 32px 0;">
+<a href="https://asciinema.org/a/paEAWYUIcfv5OH1egzlHAmwOf"><img src="https://asciinema.org/a/paEAWYUIcfv5OH1egzlHAmwOf.png" width="512"/></a>
+</p>
 
-Coming soon...
+## How do I fetch multiple pages? What is a 'query hash'?
+
+The query hash is used by instagram to validate internal
+api calls. You only need to do this once, and can reuse it.
+
+- open up instagram.com
+- visit any user
+- open up the inspector
+- trigger an xhr request
+- extract the `query_hash` id from the query string

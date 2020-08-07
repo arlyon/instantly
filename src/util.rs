@@ -6,8 +6,8 @@ use crate::data::Image;
 
 pub enum DownloadStatus {
     Downloaded,
+    ForceDownloaded,
     AlreadyExists,
-    ReDownloaded,
 }
 
 pub async fn download_image(
@@ -30,7 +30,7 @@ pub async fn download_image(
         .await
         .map(|_| {
             if exists {
-                DownloadStatus::ReDownloaded
+                DownloadStatus::ForceDownloaded
             } else {
                 DownloadStatus::Downloaded
             }

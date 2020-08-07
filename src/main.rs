@@ -67,7 +67,7 @@ async fn main() -> Result<()> {
             async move {
                 match download_image(&image, &folder, force).await {
                     Ok(DownloadStatus::Downloaded) => println!("Downloaded:     {}", image),
-                    Ok(DownloadStatus::ReDownloaded) => println!("Re-downloaded:  {}", image),
+                    Ok(DownloadStatus::ForceDownloaded) => println!("Re-downloaded:  {}", image),
                     Ok(DownloadStatus::AlreadyExists) => println!("Already Exists: {}", image),
                     Err(e) => println!("Couldn't download {}: {}", image.shortcode.yellow(), e),
                 }

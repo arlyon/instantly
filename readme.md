@@ -1,5 +1,8 @@
 # instantly ⚡
 
+![version](https://img.shields.io/crates/v/instantly?style=flat-square)
+![license](https://img.shields.io/crates/l/instantly?style=flat-square)
+
 Download photos from instagram with ease.
 
 To get started, simply:

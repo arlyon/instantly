@@ -13,7 +13,7 @@ instantly --help
 ```
 
 <p align="center" style="padding: 32px 0 32px 0;">
-<a href="https://asciinema.org/a/paEAWYUIcfv5OH1egzlHAmwOf"><img src="https://asciinema.org/a/paEAWYUIcfv5OH1egzlHAmwOf.png" width="512"/></a>
+<a href="https://asciinema.org/a/hihRzfrVZPd7N2sxKHgHwksOP" target="_blank"><img src="https://asciinema.org/a/hihRzfrVZPd7N2sxKHgHwksOP.svg" /></a>
 </p>
 
 ## How do I fetch multiple pages? What is a 'query hash'?

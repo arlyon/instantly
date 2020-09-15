@@ -168,7 +168,9 @@ async fn get_more(
         .await
         .map_err(|e| anyhow!(e))?
         .body_json()
-        .await?;
+        .await
+        .map_err(|e| anyhow!(e))?;
+
     Ok((
         data.user.edge_owner_to_timeline_media.images(),
         data.user.edge_owner_to_timeline_media.page_info,

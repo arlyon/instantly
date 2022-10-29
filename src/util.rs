@@ -26,12 +26,12 @@ pub async fn download_image(
         return Ok(DownloadStatus::AlreadyExists);
     };
 
-    let (reader, mut writer) = try_join!(
+    let (mut reader, mut writer) = try_join!(
         async { surf::get(&image.url).await.map_err(|e| anyhow!(e)) },
         async { File::create(&file_name).await.map_err(|e| anyhow!(e)) },
     )?;
 
-    copy(reader, &mut writer)
+    copy(&mut reader, &mut writer)
         .await
         .map(|_| {
             if exists {

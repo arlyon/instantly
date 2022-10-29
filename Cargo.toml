@@ -13,7 +13,7 @@ version = "0.1.0"
 [dependencies]
 anyhow = "1.0"
 async-std = {version = "1.6", features = ["attributes"]}
-clap = "3.0.0-beta.1"
+clap = { version = "3.0.0-beta.1", features = ["derive"] }
 colored = "2.0"
 ellipse = "0.2"
 futures = "0.3"

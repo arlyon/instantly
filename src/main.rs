@@ -7,7 +7,7 @@
 
 use anyhow::{anyhow, Context, Result};
 use async_std::{fs::create_dir_all, path::PathBuf};
-use clap::Clap;
+use clap::Parser;
 use colored::*;
 use futures::stream::StreamExt;
 use human_panic::setup_panic;
@@ -25,7 +25,7 @@ mod util;
 /// pages of pictures, you need the 'query hash' which can be
 /// obtained from an official instagram request. It's generated
 /// in-client, and changes frequently.
-#[derive(Clap)]
+#[derive(Parser)]
 #[clap(version = "1.0", author = "Alexander Lyon <alex@arlyon.dev>")]
 struct Opts {
     /// The username to fetch.
